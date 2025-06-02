@@ -5,8 +5,8 @@ import base64
 import traceback
 import pickle
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+# os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
 from flask import Flask, request, jsonify
 import cv2
@@ -21,6 +21,10 @@ app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "../models/model-5_14000_vpw.keras")
 ENCODER_PATH = os.path.join(BASE_DIR, "../models/label_encoder_model-5_14000_vpw.pkl")
+
+@app.route('/health', methods=['GET'])
+def health():
+    return "ok", 200
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -70,6 +74,9 @@ def cut_segments(video_path,start_sec,end_sec):
     cap = cv2.VideoCapture(video_path)
     fps = cap.get(cv2.CAP_PROP_FPS)
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    if fps == 0:
+        cap.release()
+        raise ValueError("invalid video")
     duration = total_frames / fps
     duration = round(duration, 2)
     start_frame = int(start_sec * fps)
