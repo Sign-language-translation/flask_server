@@ -36,8 +36,6 @@ ml-dtypes==0.3.2
 namex==0.1.0
 numpy==1.23.5
 oauthlib==3.2.2
-opencv-contrib-python==4.11.0.86
-opencv-python==4.11.0.86
 opt_einsum==3.4.0
 optree==0.16.0
 packaging==25.0
