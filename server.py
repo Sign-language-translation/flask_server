@@ -120,7 +120,7 @@ import traceback
 import pickle
 
 import cv2
-from runpod.serverless import start, rp_handler
+from runpod.serverless import start
 
 from utils.test_mediapipe import extract_motion_data, motion_data_to_json
 from models.classify_attn import classify_json_file
@@ -137,7 +137,7 @@ with open(ENCODER_PATH, 'rb') as f:
 label_classes = list(label_encoder.classes_)
 
 
-@rp_handler
+
 def handler(event):
     try:
         print("🔍 Event received.")
@@ -174,13 +174,15 @@ def handler(event):
         prediction = classify_json_file(MODEL_PATH, motion_json, label_classes)
         print(f"✅ Prediction successful: {prediction}")
 
-        return prediction
+        return {"prediction": prediction}
 
     except Exception as e:
         print("❌ An exception occurred:")
         traceback.print_exc()
-        return {"error": str(e)}
-
+        return {
+            "error": str(e),
+            "trace": traceback.format_exc()
+        }
     finally:
         if 'temp_dir' in locals() and os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
@@ -217,4 +219,16 @@ def cut_segment(video_path, start_sec, end_sec):
 
 
 if __name__ == "__main__":
-    start()  # Required by RunPod serverless
+    # start({"handler": handler})  # Required by RunPod serverless
+    print("🚀 Starting RunPod serverless test handler...")
+    fake_event = {
+  "input": {
+    "filename": "video.mp4",
+    "content": "Xi/a2qVfiETuPMn2M0u6CwIvTKm3QSDC6PRo+9LtVCgcQMPS2mu/tYcUTJf/a2hVP22/2FDjF/p8KBzrXt9Pzte3/hva12/8wb112/+CTNTSrxI9yBvNS/bFar7riFfQX8IPci9DL1CY7+CIlcoPZX1VeeZ9eXWkCddCoVCy+F3dC313/4kRodD/QdPNQaTPTA73tT2CLsWuu39Dk+2fNQ1L99RE1DU5qGp5T+cPR7081DU360/71ER5q8lzETEfLDROzVPt+tznfT/yw1mlvTT2/biIV0tLqmntt/grXR611fuHmjRsqNH61pf3nj3R6MtOv4Uo0eWyEmvrX74KpCSB6BjMdZiz+Nm0N7WGWWUtf61VVb/+E0+zz2Kx9Mrrrkv/ErI0mY70LybS/M+64aJsddf+y0etCtqx2Ox+Cex3v+rhaDspmXkXixM19/pgou/feteyd/Y/3ovpagjpvvxXqJ69fgir3+FEvY7Ho15GF/q8zoH+FKrVVq1rrjnwS9dVVOq6D3r16RVnt/4JlqteLuGOhq0nr3/zOv4MOvrF6frgmsSFQ4wmNFXypflRN9dvT6/PWn/4Jr/OGb5g//wYUsW9iT8oJBnQn3EBKJGlDAcfTFvX/4pUftNLYl9rrRLXHxXW1+1Xwnrr8qF+q/zV07RUYRsC+vyrr13M10vNr3ylqq/a0L5a6XhbS9HXt+uFNH7DofysPr4lpa1/GKvpV9V+ya3zHX9LXZAlYv0Ll2o1BhY15V7k2Ltt/huG31Xb/4Q7Pmw2ZCCUjWDJlqs6xME9L6qdOPgo9aM1Pur6/JX6QKNde/nCHr1t284WBNKGA33rXwW+td+FIKuvpdJ+eI16/hOu0v2zVqhdOxTr/CS15uq5d/xrY+RBoWvYqEvRf4cS9bf/gs9Jf1eq1yOv79et1l9/LXuCcgTyouipr7lcJWvX8IV6+tdI3a84r0JiVtXyKv4p67f4j1rXlGV9Oxqv2LSFeq/xy6fS7H4Q6VJH6r4J10ORdi3+ESyBmxL791KEq9Cr0gh6119WXXNr+Wv3CW37VZTKzf5XZ66v2wxoHoH16f0V4R6+UN6AeGF/7TW01lXqRIul+/S8JVo0fWX2RZ7BNkU2tCHjxLSbCCvqwjBF7B9yMJSEH9cjBb66++EFr6rX499Usy9D/BL29A/vjaPW1WqxhMbBAUEfOv/MtfgvNsfoJevf2Ja9eMTF7KwPOv6Xgq0ZzXtdb/bX3jEavQlWsel7ygpJYux9Dz1cUXrV0vS7rVzNf0SvsI6J79b8EWv26CIsEvkX1+4YCIS2/v4S29f5taXjq/rX2hFV6Jfj9ehUKhHUvZ9W+HvWtdRpMLZWfrjzMKlHF+36ugTntSsx1M/vjBXsPQH2FWytXtguEm+uzv5SvQXy",
+    "tuple": [
+      0,
+      3
+        ]
+      }
+    }
+    print(handler(fake_event))
