@@ -129,7 +129,8 @@ from models.classify_attn import classify_json_file
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "models/model-5_14000_vpw.keras")
 ENCODER_PATH = os.path.join(BASE_DIR, "models/label_encoder_model-5_14000_vpw.pkl")
-
+print(f"🔍 MODEL_PATH: {MODEL_PATH}")
+print(f"🔍 ENCODER_PATH: {ENCODER_PATH}")
 # Load label encoder
 with open(ENCODER_PATH, 'rb') as f:
     label_encoder = pickle.load(f)
@@ -139,47 +140,58 @@ label_classes = list(label_encoder.classes_)
 @rp_handler
 def handler(event):
     try:
+        print("🔍 Event received.")
         input_data = event['input']
         filename = input_data.get("filename", "video.mp4")
         base64_video = input_data["content"]
         start_sec, end_sec = input_data["tuple"]
+        print(f"🔍 Input parsed: filename={filename}, start={start_sec}, end={end_sec}")
 
         # Step 1: Save temp video
         temp_dir = tempfile.mkdtemp()
         video_path = os.path.join(temp_dir, filename)
         with open(video_path, "wb") as f:
             f.write(base64.b64decode(base64_video))
+        print(f"🔍 Video saved at {video_path}")
 
         # Step 2: Trim + extract motion
         segment_path = cut_segment(video_path, start_sec, end_sec)
-        base_name = os.path.splitext(os.path.basename(segment_path))[0]
+        print(f"🔍 Segment cut: {segment_path}")
 
+        base_name = os.path.splitext(os.path.basename(segment_path))[0]
         motion = extract_motion_data(base_name, folder_name=os.path.dirname(segment_path))
+        print(f"🔍 Motion data extracted.")
+
         motion_data_to_json(motion, base_name, folder_name=os.path.dirname(segment_path))
+        print(f"🔍 Motion data saved to JSON.")
 
         json_path = os.path.join(os.path.dirname(segment_path), f"{base_name}.json")
         with open(json_path, "r", encoding="utf-8") as jf:
             motion_json = json.load(jf)
+        print(f"🔍 JSON file loaded from {json_path}")
 
         # Step 3: Predict
         prediction = classify_json_file(MODEL_PATH, motion_json, label_classes)
+        print(f"✅ Prediction successful: {prediction}")
 
-        print(f"✅ Predicted: {prediction}")
         return prediction
 
     except Exception as e:
+        print("❌ An exception occurred:")
         traceback.print_exc()
         return {"error": str(e)}
 
     finally:
         if 'temp_dir' in locals() and os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
+            print(f"🧹 Temp directory {temp_dir} removed.")
 
 
 def cut_segment(video_path, start_sec, end_sec):
     output_dir = tempfile.mkdtemp()
     cap = cv2.VideoCapture(video_path)
     fps = cap.get(cv2.CAP_PROP_FPS)
+    print(f"🔍 Cutting segment from {start_sec}s to {end_sec}s with FPS={fps}")
     if fps == 0:
         raise ValueError("Invalid FPS")
 

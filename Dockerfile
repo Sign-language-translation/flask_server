@@ -20,4 +20,4 @@ RUN pip3 install -r requirements.txt
 EXPOSE 6000
 
 # Run your Flask server
-CMD ["python3", "server.py"]
+CMD ["python", "server.py"]
