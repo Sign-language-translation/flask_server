@@ -137,7 +137,7 @@ with open(ENCODER_PATH, 'rb') as f:
 label_classes = list(label_encoder.classes_)
 
 
-@rp_handler
+
 def handler(event):
     try:
         print("🔍 Event received.")
@@ -217,4 +217,4 @@ def cut_segment(video_path, start_sec, end_sec):
 
 
 if __name__ == "__main__":
-    start()  # Required by RunPod serverless
+    start({"handler": handler})  # Required by RunPod serverless
