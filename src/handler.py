@@ -9,10 +9,33 @@ import pickle
 import cv2
 from runpod.serverless import start
 import sys
-
+import requests
 # sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 # from utils.test_mediapipe import extract_motion_data, motion_data_to_json
 # from models.classify_attn import classify_json_file
+
+
+def download_from_gdrive(file_id, destination_path):
+    print(f"⬇️ Downloading from Google Drive: {file_id} → {destination_path}")
+    URL = "https://drive.google.com/uc?export=download"
+
+    session = requests.Session()
+    response = session.get(URL, params={'id': file_id}, stream=True)
+
+    # Handle confirmation (for large files)
+    for key, value in response.cookies.items():
+        if key.startswith('download_warning'):
+            response = session.get(URL, params={'id': file_id, 'confirm': value}, stream=True)
+            break
+
+    with open(destination_path, "wb") as f:
+        for chunk in response.iter_content(32768):
+            if chunk:
+                f.write(chunk)
+
+    print(f"✅ Download complete: {destination_path}")
+
+
 
 # ************ CONVERT JSON *****************
 import os
@@ -22,6 +45,8 @@ import numpy as np
 # Constants
 MAX_FRAMES = 150
 FACTOR = 1
+
+
 
 # Functions (as provided in your code)
 def create_feature_vector(frames_data, max_frames=MAX_FRAMES, factor=FACTOR):
@@ -550,7 +575,15 @@ MODEL_PATH = os.path.join(BASE_DIR, "models/model-5_14000_vpw.keras")
 ENCODER_PATH = os.path.join(BASE_DIR, "models/label_encoder_model-5_14000_vpw.pkl")
 print(f"🔍 MODEL_PATH: {MODEL_PATH}")
 print(f"🔍 ENCODER_PATH: {ENCODER_PATH}")
-# Load label encoder
+
+# Only download if missing
+if not os.path.exists(ENCODER_PATH):
+    download_from_gdrive("1Sb77gXJku6yX_-WwKXmWIVul1acjdWxq", ENCODER_PATH)
+
+if not os.path.exists(MODEL_PATH):
+    download_from_gdrive("1BeRQgGWn_OvteW50taJj1B_N7SgvNClT", MODEL_PATH)
+
+# Load encoder
 with open(ENCODER_PATH, 'rb') as f:
     label_encoder = pickle.load(f)
 label_classes = list(label_encoder.classes_)
