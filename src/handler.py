@@ -8,9 +8,11 @@ import pickle
 
 import cv2
 from runpod.serverless import start
+import sys
 
-from src.utils.test_mediapipe import extract_motion_data, motion_data_to_json
-from src.models.classify_attn import classify_json_file
+sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+from utils.test_mediapipe import extract_motion_data, motion_data_to_json
+from models.classify_attn import classify_json_file
 
 # Load paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
