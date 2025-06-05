@@ -405,8 +405,8 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import load_model
 from tensorflow.keras.layers import Layer, InputSpec
-from utils.conver_json_to_vector import create_feature_vector
-from utils.test_mediapipe import extract_motion_data, motion_data_to_json
+# from utils.conver_json_to_vector import create_feature_vector
+# from utils.test_mediapipe import extract_motion_data, motion_data_to_json
 
 # Global model cache
 MODEL_CACHE = None
