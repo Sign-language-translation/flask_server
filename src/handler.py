@@ -19,6 +19,9 @@ def download_from_gdrive(file_id, destination_path):
     print(f"⬇️ Downloading from Google Drive: {file_id} → {destination_path}")
     URL = "https://drive.google.com/uc?export=download"
 
+    # ✅ Ensure parent folder exists
+    os.makedirs(os.path.dirname(destination_path), exist_ok=True)
+
     session = requests.Session()
     response = session.get(URL, params={'id': file_id}, stream=True)
 
