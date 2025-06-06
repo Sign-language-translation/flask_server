@@ -585,7 +585,7 @@ if not os.path.exists(ENCODER_PATH):
     download_from_gdrive("1Sb77gXJku6yX_-WwKXmWIVul1acjdWxq", ENCODER_PATH)
 
 if not os.path.exists(MODEL_PATH):
-    download_from_gdrive("1BeRQgGWn_OvteW50taJj1B_N7SgvNClT", MODEL_PATH)
+    download_from_gdrive("1cxcTZN5yq3fK2D9lnyF_Lb6_3Nazmqrz", MODEL_PATH)
 
 # Load encoder
 with open(ENCODER_PATH, 'rb') as f:
