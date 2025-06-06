@@ -512,7 +512,7 @@ def classify_json_file(model_filename, json_content, label_mapping):
     # )
     global MODEL_CACHE
     if MODEL_CACHE is None:
-        MODEL_CACHE = load_model(
+        MODEL_CACHE = tf.keras.models.load_model(
             model_filename,
             compile=False,
             custom_objects={'SelfAttention': SelfAttention}
