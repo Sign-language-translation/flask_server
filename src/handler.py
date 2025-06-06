@@ -575,7 +575,7 @@ def classify_single_word(input_video_folder_name, video_file_name, temp_folder_p
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(BASE_DIR, "models/model-5_14000_vpw.keras")
+MODEL_PATH = os.path.join(BASE_DIR, "models/model-5_14000_vpw.h5")#used to be keras
 ENCODER_PATH = os.path.join(BASE_DIR, "models/label_encoder_model-5_14000_vpw.pkl")
 print(f"🔍 MODEL_PATH: {MODEL_PATH}")
 print(f"🔍 ENCODER_PATH: {ENCODER_PATH}")
@@ -585,7 +585,7 @@ if not os.path.exists(ENCODER_PATH):
     download_from_gdrive("1Sb77gXJku6yX_-WwKXmWIVul1acjdWxq", ENCODER_PATH)
 
 if not os.path.exists(MODEL_PATH):
-    download_from_gdrive("1cxcTZN5yq3fK2D9lnyF_Lb6_3Nazmqrz", MODEL_PATH)
+    download_from_gdrive("16d13zit5LMcaO2wa2O8gpxxkd_Vh6JU1", MODEL_PATH)
 
 # Load encoder
 with open(ENCODER_PATH, 'rb') as f:
