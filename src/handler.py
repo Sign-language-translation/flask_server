@@ -3,6 +3,7 @@ import base64
 import json
 import tempfile
 import shutil
+import time
 import traceback
 import pickle
 
@@ -11,8 +12,8 @@ from runpod.serverless import start
 import sys
 import requests
 # sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
-# from utils.test_mediapipe import extract_motion_data, motion_data_to_json
-# from models.classify_attn import classify_json_file
+from utils.test_mediapipe import extract_motion_data, motion_data_to_json
+from models.classify_attn import classify_json_file
 
 
 def download_from_gdrive(file_id, destination_path):
@@ -431,7 +432,7 @@ import json
 import pickle
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.models import load_model
+from tensorflow.keras.models import load_model,save_model
 from tensorflow.keras.layers import Layer, InputSpec
 # from utils.conver_json_to_vector import create_feature_vector
 # from utils.test_mediapipe import extract_motion_data, motion_data_to_json
@@ -585,6 +586,15 @@ if not os.path.exists(ENCODER_PATH):
 
 if not os.path.exists(MODEL_PATH):
     download_from_gdrive("1BeRQgGWn_OvteW50taJj1B_N7SgvNClT", MODEL_PATH)
+    old_model_path = MODEL_PATH
+
+    # Load the model with custom object
+    model = load_model(old_model_path, compile=False, custom_objects={"SelfAttention": SelfAttention})
+
+    # Save to a new model file without keras.src reference
+    new_model_path = os.path.join(BASE_DIR, "models/model-5_14000_vpw_cleaned.keras")
+    save_model(model, new_model_path, include_optimizer=False)
+    MODEL_PATH = os.path.join(BASE_DIR, "models/model-5_14000_vpw_cleaned.keras")
 
 # Load encoder
 with open(ENCODER_PATH, 'rb') as f:
