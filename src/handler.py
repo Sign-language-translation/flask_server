@@ -11,6 +11,7 @@ import cv2
 from runpod.serverless import start
 import sys
 import requests
+
 # sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 # from utils.test_mediapipe import extract_motion_data, motion_data_to_json
 # from models.classify_attn import classify_json_file
@@ -648,12 +649,14 @@ def handler(event):
 import subprocess
 import tempfile
 import os
+import imageio_ffmpeg
 
 def cut_segment(input_path, start_sec, end_sec):
     output_dir = tempfile.mkdtemp()
     output_path = os.path.join(output_dir, f"segment_{start_sec}_{end_sec}.mp4")
+    ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
     command = [
-        "ffmpeg",
+        ffmpeg_path,
         "-ss", str(start_sec),
         "-i", input_path,
         "-t", str(end_sec - start_sec),
