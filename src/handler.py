@@ -645,33 +645,53 @@ def handler(event):
             print(f"🧹 Temp directory {temp_dir} removed.")
 
 
-def cut_segment(video_path, start_sec, end_sec):
+import subprocess
+import tempfile
+import os
+
+def cut_segment(input_path, start_sec, end_sec):
     output_dir = tempfile.mkdtemp()
-    cap = cv2.VideoCapture(video_path)
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    print(f"🔍 Cutting segment from {start_sec}s to {end_sec}s with FPS={fps}")
-    if fps == 0:
-        raise ValueError("Invalid FPS")
-
-    start_frame = int(start_sec * fps)
-    end_frame = int(end_sec * fps)
-
-    cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     output_path = os.path.join(output_dir, f"segment_{start_sec}_{end_sec}.mp4")
-    out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
-
-    for _ in range(end_frame - start_frame):
-        ret, frame = cap.read()
-        if not ret:
-            break
-        out.write(frame)
-
-    cap.release()
-    out.release()
+    command = [
+        "ffmpeg",
+        "-ss", str(start_sec),
+        "-i", input_path,
+        "-t", str(end_sec - start_sec),
+        "-c:v", "libx264", "-c:a", "aac",
+        "-movflags", "+faststart",
+        "-y",  # overwrite
+        output_path
+    ]
+    subprocess.run(command, check=True)
     return output_path
+
+# def cut_segment(video_path, start_sec, end_sec):
+#     output_dir = tempfile.mkdtemp()
+#     cap = cv2.VideoCapture(video_path)
+#     fps = cap.get(cv2.CAP_PROP_FPS)
+#     print(f"🔍 Cutting segment from {start_sec}s to {end_sec}s with FPS={fps}")
+#     if fps == 0:
+#         raise ValueError("Invalid FPS")
+#
+#     start_frame = int(start_sec * fps)
+#     end_frame = int(end_sec * fps)
+#
+#     cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
+#     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+#     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+#     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+#     output_path = os.path.join(output_dir, f"segment_{start_sec}_{end_sec}.mp4")
+#     out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+#
+#     for _ in range(end_frame - start_frame):
+#         ret, frame = cap.read()
+#         if not ret:
+#             break
+#         out.write(frame)
+#
+#     cap.release()
+#     out.release()
+#     return output_path
 
 
 # if __name__ == "__main__":
