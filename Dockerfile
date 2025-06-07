@@ -7,12 +7,17 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     libgl1 \
     libglib2.0-0 \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+
+
+
+RUN apt-get update && apt-get install -y ffmpeg
+
 
 # Copy and install Python requirements
 COPY builder/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install scikit-learn
+
 # Copy source code
 COPY src/ .
 
