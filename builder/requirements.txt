@@ -22,17 +22,15 @@ h5py==3.13.0
 idna==3.10
 itsdangerous==2.2.0
 Jinja2==3.1.6
-# keras==2.12.0
 kiwisolver==1.4.8
 libclang==18.1.1
-ll==1.0
 Markdown==3.8
 markdown-it-py==3.0.0
 MarkupSafe==3.0.2
 matplotlib==3.10.3
 mdurl==0.1.2
 mediapipe==0.10.21
-ml-dtypes==0.3.2
+ml-dtypes==0.3.1          # ✅ Required for TF 2.13
 namex==0.1.0
 numpy==1.23.5
 oauthlib==3.2.2
@@ -60,7 +58,6 @@ tensorboard-data-server==0.7.1
 tensorflow-estimator==2.13.0
 tensorflow-io-gcs-filesystem==0.31.0
 tensorflow==2.13.0
-ml-dtypes==0.2.0
 termcolor==3.1.0
 typing_extensions==4.13.2
 urllib3==2.4.0
