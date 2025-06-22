@@ -12,6 +12,16 @@ from runpod.serverless import start
 import sys
 import requests
 
+import tensorflow as tf
+print("GPUs:", tf.config.list_physical_devices('GPU'))
+
+# ► STEP 4: Warm-up & mixed precision
+from tensorflow.keras.mixed_precision import set_global_policy
+set_global_policy('mixed_float16')
+# Warm-up
+# _dummy = tf.zeros((1,150,75,3), dtype=tf.float32)
+# MODEL_CACHE.predict(_dummy)
+
 # sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 # from utils.test_mediapipe import extract_motion_data, motion_data_to_json
 # from models.classify_attn import classify_json_file
@@ -174,6 +184,7 @@ def extract_motion_data(video_name, folder_name=video_folder):
             # Process pose
             pose_results = pose.process(frame_rgb)
             hands_results = hands.process(frame_rgb)
+
 
             # Extract key points
             frame_data = {"pose": [], "hands": []}
@@ -365,49 +376,6 @@ def save_visualization_as_video(video_name):
     print(f"Recreated video saved to {output_path}")
 
 
-# def json_to_numpy(json_file_path):
-#     """
-#     Load JSON data from a file and convert it to a NumPy array.
-
-#     Args:
-#         json_file_path (str): The path to the JSON file.
-
-#     Returns:
-#         np.ndarray: A NumPy array representing the motion data, or None if an error occurs.
-#     """
-#     try:
-#         # Step 1: Load the JSON data from the file
-#         with open(json_file_path, 'r', encoding='utf-8') as f:
-#             frames_data = json.load(f)
-
-#         if not frames_data:
-#             raise ValueError("The JSON file is empty or invalid.")
-
-#         # Step 2: Convert JSON data to a feature vector using create_feature_vector
-#         feature_vector = create_feature_vector(frames_data)
-
-#         print(f"Successfully converted JSON file '{json_file_path}' to NumPy array.")
-#         return feature_vector
-
-#     except Exception as e:
-#         print(f"Failed to convert JSON file '{json_file_path}' to NumPy array: {e}")
-#         return None
-
-
-# if __name__ == "__main__":
-#     for video in ["brother"  # Replace with the name of your video (without extension)
-#
-#     # # Extract motion data from video
-#     extract_motion_data(video_name)
-#     #
-#     # # Visualize motion data
-#     visualize_motion_data(video_name)
-#     #
-#     # # Save visualization as video
-#     # save_visualization_as_video(video_name)
-#
-#     # visualize_as_stick_figure(video_name)
-
 existing_words = ["help"]
 
 
@@ -595,106 +563,180 @@ label_classes = list(label_encoder.classes_)
 
 
 
+# def handler(event):
+#     try:
+#         print("🔍 Event received.")
+#         input_data = event['input']
+#         filename = input_data.get("filename", "video.mp4")
+#         base64_video = input_data["content"]
+#         start_sec, end_sec = input_data["tuple"]
+#         print(f"🔍 Input parsed: filename={filename}, start={start_sec}, end={end_sec}")
+#
+#         # Step 1: Save temp video
+#         temp_dir = tempfile.mkdtemp()
+#         video_path = os.path.join(temp_dir, filename)
+#         with open(video_path, "wb") as f:
+#             f.write(base64.b64decode(base64_video))
+#         print(f"🔍 Video saved at {video_path}")
+#
+#         # Step 2: Trim + extract motion
+#         segment_path = cut_segment(video_path, start_sec, end_sec)
+#         print(f"🔍 Segment cut: {segment_path}")
+#
+#         base_name = os.path.splitext(os.path.basename(segment_path))[0]
+#         motion = extract_motion_data(base_name, folder_name=os.path.dirname(segment_path))
+#         print(f"🔍 Motion data extracted.")
+#
+#         motion_data_to_json(motion, base_name, folder_name=os.path.dirname(segment_path))
+#         print(f"🔍 Motion data saved to JSON.")
+#
+#         json_path = os.path.join(os.path.dirname(segment_path), f"{base_name}.json")
+#         with open(json_path, "r", encoding="utf-8") as jf:
+#             motion_json = json.load(jf)
+#         print(f"🔍 JSON file loaded from {json_path}")
+#
+#         # Step 3: Predict
+#         prediction = classify_json_file(MODEL_PATH, motion_json, label_classes)
+#         print(f"✅ Prediction successful: {prediction}")
+#
+#         return {"prediction": prediction}
+#
+#     except Exception as e:
+#         print("❌ An exception occurred:")
+#         traceback.print_exc()
+#         return {
+#             "error": str(e),
+#             "trace": traceback.format_exc()
+#         }
+#     finally:
+#         if 'temp_dir' in locals() and os.path.exists(temp_dir):
+#             shutil.rmtree(temp_dir)
+#             print(f"🧹 Temp directory {temp_dir} removed.")
+
+from concurrent.futures import ThreadPoolExecutor
+import tempfile
+import shutil
+import base64
+import os
+import numpy as np
+import traceback
+import tensorflow as tf
+
 def handler(event):
     try:
         print("🔍 Event received.")
-        input_data = event['input']
-        filename = input_data.get("filename", "video.mp4")
-        base64_video = input_data["content"]
-        start_sec, end_sec = input_data["tuple"]
-        print(f"🔍 Input parsed: filename={filename}, start={start_sec}, end={end_sec}")
+        data      = event["input"]
+        filename  = data["filename"]
+        b64_video = data["content"]
+        tuples    = data.get("tuples", [])
+        print(f"🔍 Will classify {len(tuples)} segments from {filename}")
 
-        # Step 1: Save temp video
-        temp_dir = tempfile.mkdtemp()
+        # 1) Decode & save the full video once
+        temp_dir  = tempfile.mkdtemp()
         video_path = os.path.join(temp_dir, filename)
         with open(video_path, "wb") as f:
-            f.write(base64.b64decode(base64_video))
-        print(f"🔍 Video saved at {video_path}")
+            f.write(base64.b64decode(b64_video))
 
-        # Step 2: Trim + extract motion
-        segment_path = cut_segment(video_path, start_sec, end_sec)
-        print(f"🔍 Segment cut: {segment_path}")
+        # 2) Worker: cut + extract + vectorize a single tuple
+        def process_tuple(tup):
+            start, end = tup
+            # cut out that segment (stream copy)
+            seg_path = cut_segment(video_path, start, end)
+            # extract motion JSON
+            base = os.path.splitext(os.path.basename(seg_path))[0]
+            motion = extract_motion_data(base, folder_name=os.path.dirname(seg_path))
+            # vectorize
+            feat = create_feature_vector(motion)
+            return (start, end, feat)
 
-        base_name = os.path.splitext(os.path.basename(segment_path))[0]
-        motion = extract_motion_data(base_name, folder_name=os.path.dirname(segment_path))
-        print(f"🔍 Motion data extracted.")
+        # 3) Parallel feature extraction
+        with ThreadPoolExecutor(max_workers=4) as exec:
+            results = list(exec.map(process_tuple, tuples))
 
-        motion_data_to_json(motion, base_name, folder_name=os.path.dirname(segment_path))
-        print(f"🔍 Motion data saved to JSON.")
+        # clean up the full-video temp dir
+        shutil.rmtree(temp_dir)
 
-        json_path = os.path.join(os.path.dirname(segment_path), f"{base_name}.json")
-        with open(json_path, "r", encoding="utf-8") as jf:
-            motion_json = json.load(jf)
-        print(f"🔍 JSON file loaded from {json_path}")
+        # if nothing to do, return empty
+        if not results:
+            return {"predictions": []}
 
-        # Step 3: Predict
-        prediction = classify_json_file(MODEL_PATH, motion_json, label_classes)
-        print(f"✅ Prediction successful: {prediction}")
+        # 4) Batch inference
+        starts, ends, mats = zip(*results)
+        batch = np.stack(mats, axis=0)  # shape (N, T, 75, 3)
+        print(f"🔍 Running batch.predict on {batch.shape[0]} items")
 
-        return {"prediction": prediction}
+        global MODEL_CACHE
+        if MODEL_CACHE is None:
+            MODEL_CACHE = tf.keras.models.load_model(
+                MODEL_PATH,
+                compile=False,
+                custom_objects={"SelfAttention": SelfAttention}
+            )
+        preds = MODEL_CACHE.predict(batch)
 
-    except Exception as e:
-        print("❌ An exception occurred:")
+        # 5) Build output with start/end/label
+        out = []
+        for (s, e), p in zip(zip(starts, ends), preds):
+            label = label_classes[int(np.argmax(p))]
+            out.append({"start": s, "end": e, "label": label})
+
+        print(f"✅ Returning {len(out)} predictions")
+        return {"predictions": out}
+
+    except Exception as exc:
+        print("❌ Error in handler:")
         traceback.print_exc()
-        return {
-            "error": str(e),
-            "trace": traceback.format_exc()
-        }
-    finally:
-        if 'temp_dir' in locals() and os.path.exists(temp_dir):
-            shutil.rmtree(temp_dir)
-            print(f"🧹 Temp directory {temp_dir} removed.")
-
+        return {"error": str(exc), "trace": traceback.format_exc()}
 
 import subprocess
 import tempfile
 import os
 import imageio_ffmpeg
-
-def cut_segment(input_path, start_sec, end_sec):
-    output_dir = tempfile.mkdtemp()
-    output_path = os.path.join(output_dir, f"segment_{start_sec}_{end_sec}.mp4")
-    ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
-    command = [
-        ffmpeg_path,
-        "-ss", str(start_sec),
-        "-i", input_path,
-        "-t", str(end_sec - start_sec),
-        "-c:v", "libx264", "-c:a", "aac",
-        "-movflags", "+faststart",
-        "-y",  # overwrite
-        output_path
-    ]
-    subprocess.run(command, check=True)
-    return output_path
-
-# def cut_segment(video_path, start_sec, end_sec):
+# def cut_segment(input_path, start_sec, end_sec):
 #     output_dir = tempfile.mkdtemp()
-#     cap = cv2.VideoCapture(video_path)
-#     fps = cap.get(cv2.CAP_PROP_FPS)
-#     print(f"🔍 Cutting segment from {start_sec}s to {end_sec}s with FPS={fps}")
-#     if fps == 0:
-#         raise ValueError("Invalid FPS")
-#
-#     start_frame = int(start_sec * fps)
-#     end_frame = int(end_sec * fps)
-#
-#     cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
-#     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-#     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-#     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 #     output_path = os.path.join(output_dir, f"segment_{start_sec}_{end_sec}.mp4")
-#     out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
-#
-#     for _ in range(end_frame - start_frame):
-#         ret, frame = cap.read()
-#         if not ret:
-#             break
-#         out.write(frame)
-#
-#     cap.release()
-#     out.release()
+#     ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+#     command = [
+#         ffmpeg_path,
+#         "-ss", str(start_sec),
+#         "-i", input_path,
+#         "-to", str(end_sec),
+#         # ► STEP 1 replace re-encode codecs with copy
+#         "-c", "copy",
+#         "-avoid_negative_ts", "make_zero",
+#         "-y",  # overwrite
+#         output_path
+#     ]
+#     subprocess.run(command, check=True)
 #     return output_path
+
+def cut_segment(video_path, start_sec, end_sec):
+    output_dir = tempfile.mkdtemp()
+    cap = cv2.VideoCapture(video_path)
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    print(f"🔍 Cutting segment from {start_sec}s to {end_sec}s with FPS={fps}")
+    if fps == 0:
+        raise ValueError("Invalid FPS")
+
+    start_frame = int(start_sec * fps)
+    end_frame = int(end_sec * fps)
+
+    cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    output_path = os.path.join(output_dir, f"segment_{start_sec}_{end_sec}.mp4")
+    out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+
+    for _ in range(end_frame - start_frame):
+        ret, frame = cap.read()
+        if not ret:
+            break
+        out.write(frame)
+
+    cap.release()
+    out.release()
+    return output_path
 
 
 # if __name__ == "__main__":
